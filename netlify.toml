@@ -1,0 +1,11 @@
+# Netlify deployment configuration for Gourmet Express frontend
+[build]
+  base = "react-ui"
+  publish = "dist"
+  command = "npm run build"
+
+# Handle routing fallback for single-page application
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

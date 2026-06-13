@@ -1,0 +1,42 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: order-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/order_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+  activemq:
+    broker-url: tcp://localhost:61616
+    user: admin
+    password: admin
+  jms:
+    template:
+      default-destination: order.created
+
+camunda:
+  bpm:
+    database:
+      schema-update: true
+    generic-properties:
+      properties:
+        skip-isolation-level-check: true
+        enforceHistoryTimeToLive: false
+    job-execution:
+      enabled: true
+    admin-user:
+      id: admin
+      password: admin
+      firstName: Admin
+      lastName: Admin
+      email: admin@localhost

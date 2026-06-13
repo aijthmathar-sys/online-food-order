@@ -1,0 +1,40 @@
+# Java
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Maven
+.mvn/
+*.versionsBackup
+*.releaseBackup
+pom.xml.releaseBackup
+pom.xml.tag
+pom.xml.next
+pom.xml.note
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Node / Vite
+**/node_modules/
+**/dist/
+.npm
+*.log
+
+# IDEs
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# OS Files
+.DS_Store
+Thumbs.db
