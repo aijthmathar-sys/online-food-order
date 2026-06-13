@@ -1,0 +1,90 @@
+Gourmet Express - Simulated Order Flow Log Output
+
+================================================================================================
+STEP 1: CLIENT SUBMITS NEW ORDER
+================================================================================================
+2026-06-13 19:00:01.245 [nio-8081-exec-2] INFO  c.f.o.service.OrderService - Creating order for customer: Jane Doe
+2026-06-13 19:00:01.320 [nio-8081-exec-2] INFO  c.f.o.s.m.OrderEventProducer - Sending OrderCreatedEvent for order ID 45 to queue order.created
+2026-06-13 19:00:01.350 [nio-8081-exec-2] INFO  c.f.o.s.OrderWorkflowService - Starting Camunda Process instance for Order ID 45
+2026-06-13 19:00:01.388 [nio-8081-exec-2] INFO  org.camunda.bpm.engine.cmd - ENGINE-13005 Starting process instance: ProcessInstance[45c2a12b-4bda-11ed-bdc3-0242ac120002]
+
+================================================================================================
+STEP 2: CAMUNDA ACTIVATES PAYMENT DELEGATE & PUBLISHES TO JMS ACTIVEMQ
+================================================================================================
+2026-06-13 19:00:01.402 [JobExecutor-1] INFO  c.f.o.delegate.ProcessPaymentDelegate - ProcessPaymentDelegate: Initiating payment for orderId: 45
+2026-06-13 19:00:01.422 [JobExecutor-1] INFO  c.f.o.delegate.ProcessPaymentDelegate - Publishing PaymentRequest event to Queue: payment-requests
+
+================================================================================================
+STEP 3: PAYMENT SERVICE PROCESSES ASYNCHRONOUS PAYMENT
+================================================================================================
+2026-06-13 19:00:01.455 [ActiveMQSession] INFO  c.f.p.s.m.PaymentListener - Received PaymentRequest message for Order ID 45
+2026-06-13 19:00:02.102 [ActiveMQSession] INFO  c.f.p.service.PaymentService - Processing transaction for Order ID 45: Amount=620.00
+2026-06-13 19:00:02.320 [ActiveMQSession] INFO  c.f.p.service.PaymentService - Payment Authorized: Transaction ID TXN_7813356643
+2026-06-13 19:00:02.345 [ActiveMQSession] INFO  c.f.p.s.m.PaymentListener - Publishing PaymentResponse (SUCCESS) to Queue: payment-responses
+
+================================================================================================
+STEP 4: ORDER SERVICE CORRELATES PAYMENT RESPONSE
+================================================================================================
+2026-06-13 19:00:02.401 [ActiveMQSession] INFO  c.f.o.s.m.OrderResponseListener - Received payment response for order 45: status=SUCCESS
+2026-06-13 19:00:02.415 [ActiveMQSession] INFO  c.f.o.s.OrderWorkflowService - Correlating payment response for order 45: success=true
+2026-06-13 19:00:02.450 [ActiveMQSession] INFO  org.camunda.bpm.engine.cmd - ENGINE-13010 Correlating message PaymentCompletedMessage
+
+================================================================================================
+STEP 5: CAMUNDA ACTIVATES KITCHEN DELEGATE & PUBLISHES TO JMS ACTIVEMQ
+================================================================================================
+2026-06-13 19:00:02.502 [JobExecutor-1] INFO  c.f.o.delegate.SendToKitchenDelegate - SendToKitchenDelegate: Requesting kitchen ticket for orderId: 45
+2026-06-13 19:00:02.522 [JobExecutor-1] INFO  c.f.o.delegate.SendToKitchenDelegate - Publishing KitchenRequest event to Queue: kitchen-requests
+
+================================================================================================
+STEP 6: KITCHEN SERVICE CREATES TICKET
+================================================================================================
+2026-06-13 19:00:02.560 [ActiveMQSession] INFO  c.f.k.s.m.KitchenListener - Received KitchenRequest message for Order ID 45
+2026-06-13 19:00:02.590 [ActiveMQSession] INFO  c.f.k.service.KitchenService - Created Kitchen Ticket for Order 45 with status RECEIVED
+
+================================================================================================
+STEP 7: CHEF INITIATES AND COMPLETES PREPARATION (VIA REST API CALLS)
+================================================================================================
+2026-06-13 19:00:15.110 [nio-8083-exec-5] INFO  c.f.k.controller.KitchenController - PUT /api/kitchen/orders/1/prepare
+2026-06-13 19:00:15.145 [nio-8083-exec-5] INFO  c.f.k.service.KitchenService - Kitchen Ticket for Order ID 45 updated to status PREPARING
+2026-06-13 19:01:05.420 [nio-8083-exec-8] INFO  c.f.k.controller.KitchenController - PUT /api/kitchen/orders/1/ready
+2026-06-13 19:01:05.450 [nio-8083-exec-8] INFO  c.f.k.service.KitchenService - Kitchen Ticket for Order ID 45 is READY. Notifying Order Service.
+2026-06-13 19:01:05.477 [nio-8083-exec-8] INFO  c.f.k.s.m.KitchenListener - Publishing KitchenResponse (READY) to Queue: kitchen-responses
+
+================================================================================================
+STEP 8: ORDER SERVICE CORRELATES KITCHEN READY RESPONSE
+================================================================================================
+2026-06-13 19:01:05.510 [ActiveMQSession] INFO  c.f.o.s.m.OrderResponseListener - Received kitchen response for order 45: status=READY
+2026-06-13 19:01:05.522 [ActiveMQSession] INFO  c.f.o.s.OrderWorkflowService - Correlating kitchen response for order 45: status=READY
+2026-06-13 19:01:05.555 [ActiveMQSession] INFO  org.camunda.bpm.engine.cmd - ENGINE-13010 Correlating message KitchenCompletedMessage
+
+================================================================================================
+STEP 9: CAMUNDA ACTIVATES DELIVERY DELEGATE & PUBLISHES TO JMS ACTIVEMQ
+================================================================================================
+2026-06-13 19:01:05.602 [JobExecutor-1] INFO  c.f.o.delegate.RequestDeliveryDelegate - RequestDeliveryDelegate: Requesting delivery dispatch for orderId: 45
+2026-06-13 19:01:05.632 [JobExecutor-1] INFO  c.f.o.delegate.RequestDeliveryDelegate - Publishing DeliveryRequest event to Queue: delivery-requests
+
+================================================================================================
+STEP 10: DELIVERY SERVICE ASSIGNS RIDER
+================================================================================================
+2026-06-13 19:01:05.680 [ActiveMQSession] INFO  c.f.d.s.m.DeliveryListener - Received DeliveryRequest message for Order ID 45
+2026-06-13 19:01:05.710 [ActiveMQSession] INFO  c.f.d.service.DeliveryService - Created Delivery tracking record for Order 45. Status: ASSIGNED.
+
+================================================================================================
+STEP 11: RIDER DISPATCHED AND ARRIVED (VIA REST API CALLS)
+================================================================================================
+2026-06-13 19:01:20.102 [nio-8084-exec-1] INFO  c.f.d.controller.DeliveryController - PUT /api/deliveries/1/start
+2026-06-13 19:01:20.130 [nio-8084-exec-1] INFO  c.f.d.service.DeliveryService - Rider John Doe marked delivery for Order 45 as OUT_FOR_DELIVERY
+2026-06-13 19:02:10.500 [nio-8084-exec-3] INFO  c.f.d.controller.DeliveryController - PUT /api/deliveries/1/complete
+2026-06-13 19:02:10.535 [nio-8084-exec-3] INFO  c.f.d.service.DeliveryService - Order 45 successfully marked as DELIVERED
+2026-06-13 19:02:10.565 [nio-8084-exec-3] INFO  c.f.d.s.m.DeliveryListener - Publishing DeliveryResponse (DELIVERED) to Queue: delivery-responses
+
+================================================================================================
+STEP 12: ORDER SERVICE CORRELATES DELIVERY COMPLETED RESPONSE & CAMUNDA ENDS WORKFLOW
+================================================================================================
+2026-06-13 19:02:10.601 [ActiveMQSession] INFO  c.f.o.s.m.OrderResponseListener - Received delivery response for order 45: status=DELIVERED
+2026-06-13 19:02:10.620 [ActiveMQSession] INFO  c.f.o.s.OrderWorkflowService - Correlating delivery response for order 45: status=DELIVERED
+2026-06-13 19:02:10.655 [ActiveMQSession] INFO  org.camunda.bpm.engine.cmd - ENGINE-13010 Correlating message DeliveryCompletedMessage
+2026-06-13 19:02:10.710 [ActiveMQSession] INFO  org.camunda.bpm.engine.cmd - ENGINE-13020 Process instance: ProcessInstance[45c2a12b-4bda-11ed-bdc3-0242ac120002] has completed successfully!
+================================================================================================
+LOG END
+================================================================================================
